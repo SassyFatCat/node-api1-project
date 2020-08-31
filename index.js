@@ -70,15 +70,18 @@ server.delete('/api/users/:id', (req, res) => {
 server.put('/api/users/:id', (req, res) => {
     const changes = req.body;
     const id = Number(req.params.id);
-
     let found = users.find(user => user.id === id);
 
-    if(found) {
-        Object.assign(found, changes); 
-        res.status(200).json(found);
+    if (!found) {
+        res.status(404).json({ message: "The user with the specified ID does not exist." })
+    } else if (!changes.name | !changes.bio) {
+        res.status(400).json({ errorMessage: "Please provide name and bio for the user." })
     } else {
-        res.status(404).json({ message: 'not found' });
+        Object.assign(found, changes)
+            .then(res.status(200).json(found))
+            .catch(res.status(500).json({ errorMessage: "The user information could not be modified." }))
     }
+
 })
 
 const port = 8000;

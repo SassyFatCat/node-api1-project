@@ -7,57 +7,81 @@ server.use(express.json()); /* invoke the method, this is needed for post and pu
 otherwise express can't read request data - this is middleware */
 
 server.get('/', (req, res) => { // request handler function, res is given by express
-    res.status(200).json({hello: 'Node 33'}); // res object allows us to produce the response
+    res.status(200).json({welcome: 'to the api'}); // res object allows us to produce the response
 });
 
-// list  hubs
+// list users
 
-let hubs = [
+let users = [
     {
         id: 1,
-        name: 'node intro',
-        lessonID: 1,
-        cohort: 'node33'
-    },
-    {
-        id: 2,
-        name: 'node routing',
-        lessonID: 2,
-        cohort: 'node33'
+        name: 'John Smith',
+        bio: 'A person'
     },
 ]
 
-server.get('/hubs', (req, res) => {
-    res.status(200).json({ data: hubs})
+server.get('/api/users', (req, res) => {
+    if (users) {
+        res.status(200).json({ data: users});
+    } else {
+        res.status(500).json({ errorMessage: "The users information could not be retrieved." })
+    }
+
 });
 
-server.post('/hubs', (req, res) => {
-    const hub = req.body;
-    hubs.push(hub);
-
-    res.status(201).json({ data: hubs })
-});
-
-server.delete('/hubs/:id', (req, res) => {
+server.get('/api/users/:id', (req, res) => {
     const id = Number(req.params.id);
-
-    // all values coming from the URL are strings, so we use the Number constructor
-    hubs = hubs.filter(hub => hub.id !== id);
-    res.status(200).json(hubs); // .end() sends a success message, and ends the response without sending anything
+    if (!users) {
+        res.status(500).json({ errorMessage: "The user information could not be retrieved." })
+    } else if (!users.find(user => user.id === id)) {
+        res.status(404).json({ message: "The user with the specified ID does not exist." })
+    } else {
+        res.status(200).json({data: users.find(user => user.id === id)})
+    }
 })
 
-server.put('/hubs/:id', (req, res) => {
+server.post('/api/users', (req, res) => {
+    const newUser = req.body;
+    if (!newUser) {
+        res.status(500).json({ errorMessage: "There was an error while saving the user to the database" })
+    }
+    else if (newUser.name && newUser.bio) {
+        users.push(newUser);
+        res.status(201).json({ data: newUser });
+    } else {
+        res.status(400).json({ errorMessage: "Please provide name and bio for the user." })
+    }
+});
+
+server.delete('/api/users/:id', (req, res) => {
+    const id = Number(req.params.id);
+    if (!users) {
+        res.status(500).json({ errorMessage: "The user could not be removed" })
+    } else if (!users.find(user => user.id === id)) {
+        res.status(404).json({ message: "The user with the specified ID does not exist." })
+    } else {
+        users = users.filter(user => user.id !== id);
+        res.status(200).json({ data: users })
+    }
+    // all values coming from the URL are strings, so we use the Number constructor
+
+})
+
+server.put('/api/users/:id', (req, res) => {
     const changes = req.body;
     const id = Number(req.params.id);
+    let found = users.find(user => user.id === id);
 
-    let found = hubs.find(hub => hub.id === id);
-
-    if(found) {
-        Object.assign(found, changes); 
-        res.status(200).json(found);
+    if (!found) {
+        res.status(404).json({ message: "The user with the specified ID does not exist." })
+    } else if (!changes.name | !changes.bio) {
+        res.status(400).json({ errorMessage: "Please provide name and bio for the user." })
     } else {
-        res.status(404).json({ message: 'not found' });
+        Object.assign(found, changes)
+            .then(res.status(200).json(found))
+            .catch(res.status(500).json({ errorMessage: "The user information could not be modified." }))
     }
+
 })
 
 const port = 8000;
